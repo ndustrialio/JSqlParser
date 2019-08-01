@@ -32,6 +32,7 @@ import net.sf.jsqlparser.expression.JdbcParameter;
 import net.sf.jsqlparser.expression.JsonExpression;
 import net.sf.jsqlparser.expression.KeepExpression;
 import net.sf.jsqlparser.expression.LongValue;
+import net.sf.jsqlparser.expression.MSSQLTryCastExpression;
 import net.sf.jsqlparser.expression.MySQLGroupConcat;
 import net.sf.jsqlparser.expression.NextValExpression;
 import net.sf.jsqlparser.expression.NotExpression;
@@ -588,6 +589,21 @@ public class ExpressionDeParser implements ExpressionVisitor, ItemsListVisitor {
     public void visit(CastExpression cast) {
         if (cast.isUseCastKeyword()) {
             buffer.append("CAST(");
+            cast.getLeftExpression().accept(this);
+            buffer.append(" AS ");
+            buffer.append(cast.getType());
+            buffer.append(")");
+        } else {
+            cast.getLeftExpression().accept(this);
+            buffer.append("::");
+            buffer.append(cast.getType());
+        }
+    }
+
+    @Override
+    public void visit(MSSQLTryCastExpression cast) {
+        if (cast.isUseCastKeyword()) {
+            buffer.append("TRY_CAST(");
             cast.getLeftExpression().accept(this);
             buffer.append(" AS ");
             buffer.append(cast.getType());

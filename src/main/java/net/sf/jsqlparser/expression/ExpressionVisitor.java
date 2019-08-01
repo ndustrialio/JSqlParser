@@ -112,6 +112,8 @@ public interface ExpressionVisitor {
 
     void visit(CastExpression cast);
 
+    void visit(MSSQLTryCastExpression mstrycast);
+
     void visit(Modulo modulo);
 
     void visit(AnalyticExpression aexpr);

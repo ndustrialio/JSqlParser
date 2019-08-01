@@ -294,6 +294,12 @@ public class ExpressionVisitorAdapter implements ExpressionVisitor, ItemsListVis
     }
 
     @Override
+    public void visit(MSSQLTryCastExpression expr) {
+        expr.getLeftExpression().accept(this);
+    }
+
+
+    @Override
     public void visit(Modulo expr) {
         visitBinaryExpression(expr);
     }

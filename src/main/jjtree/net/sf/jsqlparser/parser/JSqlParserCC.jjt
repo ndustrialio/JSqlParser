@@ -276,6 +276,7 @@ TOKEN: /* SQL Keywords. prefixed with K_ to avoid name clashes */
 |   <K_TRAILING:"TRAILING">
 |   <K_TRUNCATE:"TRUNCATE">
 |   <K_TRUE:"TRUE">
+|   <K_TRY_CAST:"TRY_CAST">
 |   <K_TUMBLING:"TUMBLING">
 |   <K_TYPE:"TYPE">
 |   <K_UNBOUNDED: "UNBOUNDED"> 
@@ -1075,6 +1076,7 @@ String RelObjectNameWithoutValue() :
       | tk=<K_TEMP> | tk=<K_TEMPORARY> | tk=<K_TYPE> | tk=<K_ISNULL> 
 	  | tk=<K_ZONE> | tk=<K_COLUMNS> | tk=<K_DESCRIBE> | tk=<K_FN> | tk=<K_PATH>
       | tk=<K_DATE_LITERAL> | tk=<K_NEXTVAL> | tk=<K_TRUE> | tk=<K_FALSE> | tk=<K_DUPLICATE>
+      | tk=<K_TRY_CAST>
 /*      | tk=<K_PLACING> | tk=<K_BOTH> | tk=<K_LEADING> | tk=<K_TRAILING> */
       )
 
@@ -2783,6 +2785,7 @@ Expression PrimaryExpression() #PrimaryExpression:
 {
     Expression retval = null;
     CastExpression castExpr = null;
+    MSSQLTryCastExpression tryCastExpr = null;
     Token token = null;
     Token sign = null;
     String tmp = "";
@@ -2828,6 +2831,8 @@ Expression PrimaryExpression() #PrimaryExpression:
         | token=<S_HEX>  { retval = new HexValue(token.image); }
 
         | LOOKAHEAD(2) retval=CastExpression()
+
+        | LOOKAHEAD(2) retval=MSSQLTryCastExpression()
 
         // support timestamp expressions
         | token=<K_TIME_KEY_EXPR> { retval = new TimeKeyExpression(token.image); }
@@ -3109,6 +3114,23 @@ CastExpression CastExpression():
 }
 {
     <K_CAST> "(" expression=SimpleExpression() <K_AS> type=ColDataType() ")" { retval.setUseCastKeyword(true); }
+
+    {
+        retval.setLeftExpression(expression);
+        retval.setType(type);
+        return retval;
+    }
+}
+
+MSSQLTryCastExpression MSSQLTryCastExpression():
+{
+    MSSQLTryCastExpression retval = new MSSQLTryCastExpression();
+    ColDataType type = null;
+    Expression expression = null;
+    boolean    useCastKeyword;
+}
+{
+    <K_TRY_CAST> "(" expression=SimpleExpression() <K_AS> type=ColDataType() ")" { retval.setUseCastKeyword(true); }
 
     {
         retval.setLeftExpression(expression);
