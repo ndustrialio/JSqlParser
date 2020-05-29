@@ -17,6 +17,7 @@ public class SubJoin implements FromItem {
     private FromItem left;
     private Alias alias;
     private Pivot pivot;
+    private UnPivot unpivot;
     private List<Join> joinList;
 
     @Override
@@ -51,6 +52,16 @@ public class SubJoin implements FromItem {
     }
 
     @Override
+    public UnPivot getUnPivot() {
+        return this.unpivot;
+    }
+
+    @Override
+    public void setUnPivot(UnPivot unpivot) {
+        this.unpivot = unpivot;
+    }
+
+    @Override
     public Alias getAlias() {
         return alias;
     }
@@ -65,10 +76,15 @@ public class SubJoin implements FromItem {
         StringBuilder sb = new StringBuilder();
         sb.append("(").append(left);
         for (Join j : joinList) {
-            sb.append(" ").append(j);
+            if (j.isSimple()) {
+                sb.append(", ").append(j);
+            } else {
+                sb.append(" ").append(j);
+            }
         }
 
-        sb.append(")").append((alias != null) ? (" " + alias.toString()) : "").append((pivot != null) ? " " + pivot : "");
+        sb.append(")").append((alias != null) ? (" " + alias.toString()) : "").append((pivot != null) ? " " + pivot : "")
+                .append((unpivot != null) ? " " + unpivot : "");
         return sb.toString();
     }
 }

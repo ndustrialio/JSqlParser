@@ -9,6 +9,17 @@
  */
 package net.sf.jsqlparser.statement.create;
 
+import net.sf.jsqlparser.JSQLParserException;
+import net.sf.jsqlparser.parser.CCJSqlParserManager;
+import net.sf.jsqlparser.parser.CCJSqlParserUtil;
+import net.sf.jsqlparser.statement.create.table.ColumnDefinition;
+import net.sf.jsqlparser.statement.create.table.CreateTable;
+import net.sf.jsqlparser.statement.create.table.Index;
+import net.sf.jsqlparser.statement.create.table.RowMovementMode;
+import net.sf.jsqlparser.test.TestException;
+import org.assertj.core.api.Assertions;
+import org.junit.Test;
+
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.StringReader;
@@ -16,19 +27,12 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.StringTokenizer;
-import net.sf.jsqlparser.JSQLParserException;
-import net.sf.jsqlparser.parser.CCJSqlParserManager;
-import net.sf.jsqlparser.parser.CCJSqlParserUtil;
-import net.sf.jsqlparser.statement.create.table.ColumnDefinition;
-import net.sf.jsqlparser.statement.create.table.CreateTable;
-import net.sf.jsqlparser.statement.create.table.Index;
-import net.sf.jsqlparser.test.TestException;
-import static net.sf.jsqlparser.test.TestUtils.*;
+
+import static net.sf.jsqlparser.test.TestUtils.assertSqlCanBeParsedAndDeparsed;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import org.junit.Test;
 
 public class CreateTableTest {
 
@@ -343,7 +347,7 @@ public class CreateTableTest {
 
     @Test
     public void testKeySyntaxWithLengthColumnParameter() throws JSQLParserException {
-        assertSqlCanBeParsedAndDeparsed("CREATE TABLE basic (BASIC_TITLE varchar (255) NOT NULL, KEY BASIC_TITLE (BASIC_TITLE(255)))");
+        assertSqlCanBeParsedAndDeparsed("CREATE TABLE basic (BASIC_TITLE varchar (255) NOT NULL, KEY BASIC_TITLE (BASIC_TITLE (255)))");
     }
 
     @Test
@@ -438,8 +442,8 @@ public class CreateTableTest {
                             }
 
                             if (!unique) {
-                                if (columnDefinition.getColumnSpecStrings() != null) {
-                                    for (Iterator iterator = columnDefinition.getColumnSpecStrings().
+                                if (columnDefinition.getColumnSpecs() != null) {
+                                    for (Iterator iterator = columnDefinition.getColumnSpecs().
                                             iterator(); iterator
                                                     .hasNext();) {
                                         String par = (String) iterator.next();
@@ -568,5 +572,73 @@ public class CreateTableTest {
         assertNotNull(colName);
 
         assertEquals("GBK", colName.getColDataType().getCharacterSet());
+    }
+
+    @Test
+    public void testCreateTableIssue924() throws JSQLParserException {
+        assertSqlCanBeParsedAndDeparsed("CREATE TABLE test_descending_indexes (c1 INT, c2 INT, INDEX idx1 (c1 ASC, c2 DESC))");
+    }
+
+    @Test
+    public void testCreateTableIssue924_2() throws JSQLParserException {
+        assertSqlCanBeParsedAndDeparsed("CREATE TABLE test_descending_indexes (c1 INT, c2 INT, INDEX idx1 (c1 ASC, c2 ASC), INDEX idx2 (c1 ASC, c2 DESC), INDEX idx3 (c1 DESC, c2 ASC), INDEX idx4 (c1 DESC, c2 DESC))");
+    }
+
+    @Test
+    public void testCreateTableIssue921() throws JSQLParserException {
+        assertSqlCanBeParsedAndDeparsed("CREATE TABLE binary_test (c1 binary (10))");
+    }
+
+    @Test
+    public void testCreateTableWithComments() throws JSQLParserException {
+        assertSqlCanBeParsedAndDeparsed("CREATE TABLE IF NOT EXISTS `eai_applications`(\n"
+                + "  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT COMMENT 'comment',\n"
+                + "  `name` varchar(64) NOT NULL COMMENT 'comment',\n"
+                + "  `logo` varchar(128) DEFAULT NULL COMMENT 'comment',\n"
+                + "  `description` varchar(128) DEFAULT NULL COMMENT 'comment',\n"
+                + "  `type` int(11) NOT NULL COMMENT 'comment',\n"
+                + "  `status` tinyint(2) NOT NULL COMMENT 'comment',\n"
+                + "  `creator_id` bigint(20) NOT NULL COMMENT 'comment',\n"
+                + "  `created_at` datetime NOT NULL COMMENT 'comment',\n"
+                + "  `updated_at` datetime NOT NULL COMMENT 'comment',\n"
+                + "  PRIMARY KEY (`id`)\n"
+                + ") COMMENT='comment'", true);
+    }
+
+    @Test
+    public void testCreateTableWithCommentIssue922() throws JSQLParserException {
+        assertSqlCanBeParsedAndDeparsed("CREATE TABLE index_with_comment_test (\n"
+                + "id int(11) NOT NULL,\n"
+                + "name varchar(60) DEFAULT NULL,\n"
+                + "KEY name_ind (name) COMMENT 'comment for the name index'\n"
+                + ") ENGINE=InnoDB DEFAULT CHARSET=utf8", true);
+    }
+
+    @Test
+    public void testEnableRowMovementOption() throws JSQLParserException {
+        String sql = "CREATE TABLE test (startdate DATE) ENABLE ROW MOVEMENT";
+
+        CreateTable createTable = (CreateTable) CCJSqlParserUtil.parse(sql);
+        Assertions.assertThat(createTable.getRowMovement()).isNotNull();
+        Assertions.assertThat(createTable.getRowMovement().getMode()).isEqualTo(RowMovementMode.ENABLE);
+
+        assertSqlCanBeParsedAndDeparsed(sql);
+    }
+
+    @Test
+    public void testDisableRowMovementOption() throws JSQLParserException {
+        String sql = "CREATE TABLE test (startdate DATE) DISABLE ROW MOVEMENT";
+
+        CreateTable createTable = (CreateTable) CCJSqlParserUtil.parse(sql);
+        Assertions.assertThat(createTable.getRowMovement()).isNotNull();
+        Assertions.assertThat(createTable.getRowMovement().getMode()).isEqualTo(RowMovementMode.DISABLE);
+
+        assertSqlCanBeParsedAndDeparsed(sql);
+    }
+
+    @Test
+    public void tableMovementWithAS() throws JSQLParserException {
+        String sql = "CREATE TABLE test (startdate DATE) DISABLE ROW MOVEMENT AS SELECT 1 FROM dual";
+        assertSqlCanBeParsedAndDeparsed(sql);
     }
 }

@@ -158,4 +158,6 @@ public interface ExpressionVisitor {
 
     public void visit(SimilarToExpression aThis);
 
+    public void visit(ArrayExpression aThis);
+
 }

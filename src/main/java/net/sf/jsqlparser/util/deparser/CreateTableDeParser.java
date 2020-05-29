@@ -49,17 +49,7 @@ public class CreateTableDeParser {
             buffer.append("IF NOT EXISTS ");
         }
         buffer.append(createTable.getTable().getFullyQualifiedName());
-        if (createTable.getSelect() != null) {
-            buffer.append(" AS ");
-            if (createTable.isSelectParenthesis()) {
-                buffer.append("(");
-            }
-            Select sel = createTable.getSelect();
-            sel.accept(this.statementDeParser);
-            if (createTable.isSelectParenthesis()) {
-                buffer.append(")");
-            }
-        } else {
+
             if (createTable.getColumnDefinitions() != null) {
                 buffer.append(" (");
                 for (Iterator<ColumnDefinition> iter = createTable.getColumnDefinitions().iterator(); iter.
@@ -68,8 +58,8 @@ public class CreateTableDeParser {
                     buffer.append(columnDefinition.getColumnName());
                     buffer.append(" ");
                     buffer.append(columnDefinition.getColDataType().toString());
-                    if (columnDefinition.getColumnSpecStrings() != null) {
-                        for (String s : columnDefinition.getColumnSpecStrings()) {
+                    if (columnDefinition.getColumnSpecs() != null) {
+                        for (String s : columnDefinition.getColumnSpecs()) {
                             buffer.append(" ");
                             buffer.append(s);
                         }
@@ -89,12 +79,26 @@ public class CreateTableDeParser {
                 }
 
                 buffer.append(")");
-            }
         }
 
         params = PlainSelect.getStringList(createTable.getTableOptionsStrings(), false, false);
         if (!"".equals(params)) {
             buffer.append(' ').append(params);
+        }
+
+        if (createTable.getRowMovement() != null) {
+            buffer.append(' ').append(createTable.getRowMovement().getMode().toString()).append(" ROW MOVEMENT");
+        }
+        if (createTable.getSelect() != null) {
+            buffer.append(" AS ");
+            if (createTable.isSelectParenthesis()) {
+                buffer.append("(");
+            }
+            Select sel = createTable.getSelect();
+            sel.accept(this.statementDeParser);
+            if (createTable.isSelectParenthesis()) {
+                buffer.append(")");
+            }
         }
     }
 

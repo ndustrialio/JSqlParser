@@ -360,7 +360,7 @@ public class AlterTest {
     }
 
     @Test
-    public void testIssue633() throws JSQLParserException {
+    public void testIssue633() throws JSQLParserException, JSQLParserException, JSQLParserException {
         assertSqlCanBeParsedAndDeparsed("ALTER TABLE team_phases ADD CONSTRAINT team_phases_id_key UNIQUE (id)");
     }
 
@@ -382,5 +382,63 @@ public class AlterTest {
     @Test
     public void testIssue259() throws JSQLParserException {
         assertSqlCanBeParsedAndDeparsed("ALTER TABLE feature_v2 ADD COLUMN third_user_id int (10) unsigned DEFAULT '0' COMMENT '第三方用户id' after kdt_id");
+    }
+    
+    @Test
+    public void testIssue633_2() throws JSQLParserException {
+        assertSqlCanBeParsedAndDeparsed("CREATE INDEX idx_american_football_action_plays_1 ON american_football_action_plays USING btree (play_type)");
+    }
+    
+    @Test
+    public void testAlterOnlyIssue928() throws JSQLParserException {
+        assertSqlCanBeParsedAndDeparsed("ALTER TABLE ONLY categories ADD CONSTRAINT pk_categories PRIMARY KEY (category_id)");
+    }
+    
+    @Test
+    public void testAlterConstraintWithoutFKSourceColumnsIssue929() throws JSQLParserException {
+        assertSqlCanBeParsedAndDeparsed("ALTER TABLE orders ADD CONSTRAINT fk_orders_customers FOREIGN KEY (customer_id) REFERENCES customers");
+    }
+    
+    public void testAlterTableAlterColumnDropNotNullIssue918() throws JSQLParserException {
+        assertSqlCanBeParsedAndDeparsed("ALTER TABLE \"user_table_t\" ALTER COLUMN name DROP NOT NULL");
+    }
+
+    @Test
+    public void testAlterTableRenameColumn() throws JSQLParserException {
+        String sql = "ALTER TABLE \"test_table\" RENAME COLUMN \"test_column\" TO \"test_c\"";
+        assertSqlCanBeParsedAndDeparsed(sql);
+
+        Alter alter= (Alter) CCJSqlParserUtil.parse(sql);
+        AlterExpression expression = alter.getAlterExpressions().get(0);
+        assertEquals(expression.getOperation(), AlterOperation.RENAME);
+        assertEquals(expression.getColOldName(), "\"test_column\"");
+        assertEquals(expression.getColumnName(), "\"test_c\"");
+    }
+    
+    @Test
+    public void testAlterTableForeignKeyIssue981() throws JSQLParserException {
+        assertSqlCanBeParsedAndDeparsed(
+                "ALTER TABLE atconfigpro " +
+                "ADD CONSTRAINT atconfigpro_atconfignow_id_foreign FOREIGN KEY (atconfignow_id) REFERENCES atconfignow(id) ON DELETE CASCADE, " +
+                "ADD CONSTRAINT atconfigpro_attariff_id_foreign FOREIGN KEY (attariff_id) REFERENCES attariff(id) ON DELETE CASCADE");
+    }
+    
+    @Test
+    public void testAlterTableForeignKeyIssue981_2() throws JSQLParserException {
+        assertSqlCanBeParsedAndDeparsed(
+                "ALTER TABLE atconfigpro " +
+                "ADD CONSTRAINT atconfigpro_atconfignow_id_foreign FOREIGN KEY (atconfignow_id) REFERENCES atconfignow(id) ON DELETE CASCADE");
+    }
+    
+    @Test
+    public void testAlterTableTableCommentIssue984() throws JSQLParserException {
+        assertSqlCanBeParsedAndDeparsed(
+                "ALTER TABLE texto_fichero COMMENT 'This is a sample comment'");
+    }
+    
+    @Test
+    public void testAlterTableColumnCommentIssue984() throws JSQLParserException {
+        assertSqlCanBeParsedAndDeparsed(
+                "ALTER TABLE texto_fichero MODIFY id COMMENT 'some comment'");
     }
 }

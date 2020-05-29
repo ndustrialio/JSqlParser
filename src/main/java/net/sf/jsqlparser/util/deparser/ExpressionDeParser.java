@@ -14,6 +14,7 @@ import java.util.List;
 import net.sf.jsqlparser.expression.AllComparisonExpression;
 import net.sf.jsqlparser.expression.AnalyticExpression;
 import net.sf.jsqlparser.expression.AnyComparisonExpression;
+import net.sf.jsqlparser.expression.ArrayExpression;
 import net.sf.jsqlparser.expression.BinaryExpression;
 import net.sf.jsqlparser.expression.CaseExpression;
 import net.sf.jsqlparser.expression.CastExpression;
@@ -201,7 +202,11 @@ public class ExpressionDeParser implements ExpressionVisitor, ItemsListVisitor {
         }
         buffer.append(" IN ");
 
-        inExpression.getRightItemsList().accept(this);
+        if (inExpression.getRightExpression() != null) {
+            inExpression.getRightExpression().accept(this);
+        } else {
+            inExpression.getRightItemsList().accept(this);
+        }
     }
 
     @Override
@@ -216,8 +221,8 @@ public class ExpressionDeParser implements ExpressionVisitor, ItemsListVisitor {
                 columnsListCommaSeperated += ",";
             }
         }
-        buffer.append("MATCH (" + columnsListCommaSeperated + ") AGAINST (" + fullTextSearch.getAgainstValue() +
-                (fullTextSearch.getSearchModifier() != null ? " " + fullTextSearch.getSearchModifier() : "") + ")");
+        buffer.append("MATCH (" + columnsListCommaSeperated + ") AGAINST (" + fullTextSearch.getAgainstValue()
+                + (fullTextSearch.getSearchModifier() != null ? " " + fullTextSearch.getSearchModifier() : "") + ")");
     }
 
     @Override
@@ -658,6 +663,12 @@ public class ExpressionDeParser implements ExpressionVisitor, ItemsListVisitor {
             buffer.append(" ");
         }
 
+        if (aexpr.getFilterExpression() != null) {
+            buffer.append("FILTER (WHERE ");
+            aexpr.getFilterExpression().accept(this);
+            buffer.append(") ");
+        }
+
         switch (aexpr.getType()) {
             case WITHIN_GROUP:
                 buffer.append("WITHIN GROUP");
@@ -669,12 +680,18 @@ public class ExpressionDeParser implements ExpressionVisitor, ItemsListVisitor {
 
         if (partitionExpressionList != null && !partitionExpressionList.getExpressions().isEmpty()) {
             buffer.append("PARTITION BY ");
+            if (aexpr.isPartitionByBrackets()) {
+                buffer.append("(");
+            }
             List<Expression> expressions = partitionExpressionList.getExpressions();
             for (int i = 0; i < expressions.size(); i++) {
                 if (i > 0) {
                     buffer.append(", ");
                 }
                 expressions.get(i).accept(this);
+            }
+            if (aexpr.isPartitionByBrackets()) {
+                buffer.append(")");
             }
             buffer.append(" ");
         }
@@ -688,11 +705,13 @@ public class ExpressionDeParser implements ExpressionVisitor, ItemsListVisitor {
                 }
                 orderByDeParser.deParseElement(orderByElements.get(i));
             }
+        }
 
-            if (windowElement != null) {
+        if (windowElement != null) {
+            if (orderByElements != null && !orderByElements.isEmpty()) {
                 buffer.append(' ');
-                buffer.append(windowElement);
             }
+            buffer.append(windowElement);
         }
 
         buffer.append(")");
@@ -824,4 +843,11 @@ public class ExpressionDeParser implements ExpressionVisitor, ItemsListVisitor {
         visitBinaryExpression(expr, (expr.isNot() ? " NOT" : "") + " SIMILAR TO ");
     }
 
+    @Override
+    public void visit(ArrayExpression array) {
+        array.getObjExpression().accept(this);
+        buffer.append("[");
+        array.getIndexExpression().accept(this);
+        buffer.append("]");
+    }
 }

@@ -36,6 +36,10 @@ public class SelectDeParser implements SelectVisitor, SelectItemVisitor, FromIte
         }
         buffer.append("SELECT ");
 
+        if (plainSelect.getMySqlHintStraightJoin()) {
+            buffer.append("STRAIGHT_JOIN ");
+        }
+
         OracleHint hint = plainSelect.getOracleHint();
         if (hint != null) {
             buffer.append(hint).append(" ");
@@ -161,6 +165,9 @@ public class SelectDeParser implements SelectVisitor, SelectItemVisitor, FromIte
                 // wait's toString will do the formatting for us
                 buffer.append(plainSelect.getWait());
             }
+            if (plainSelect.isNoWait()) {
+                buffer.append(" NOWAIT");
+            }
         }
         if (plainSelect.getOptimizeFor() != null) {
             deparseOptimizeFor(plainSelect.getOptimizeFor());
@@ -184,7 +191,6 @@ public class SelectDeParser implements SelectVisitor, SelectItemVisitor, FromIte
         if (selectExpressionItem.getAlias() != null) {
             buffer.append(selectExpressionItem.getAlias().toString());
         }
-
     }
 
     @Override
@@ -224,9 +230,17 @@ public class SelectDeParser implements SelectVisitor, SelectItemVisitor, FromIte
         if (pivot != null) {
             pivot.accept(this);
         }
+        UnPivot unpivot = tableName.getUnPivot();
+        if (unpivot != null) {
+            unpivot.accept(this);
+        }
         MySQLIndexHint indexHint = tableName.getIndexHint();
         if (indexHint != null) {
             buffer.append(indexHint);
+        }
+        SQLServerHints sqlServerHints = tableName.getSqlServerHints();
+        if (sqlServerHints != null) {
+            buffer.append(sqlServerHints);
         }
     }
 
@@ -244,6 +258,21 @@ public class SelectDeParser implements SelectVisitor, SelectItemVisitor, FromIte
         if (pivot.getAlias() != null) {
             buffer.append(pivot.getAlias().toString());
         }
+    }
+
+    @Override
+    public void visit(UnPivot unpivot) {
+        boolean showOptions = unpivot.getIncludeNullsSpecified();
+        boolean includeNulls = unpivot.getIncludeNulls();
+        List<Column> unpivotForClause = unpivot.getUnPivotForClause();
+        buffer.append(" UNPIVOT")
+                .append(showOptions && includeNulls ? " INCLUDE NULLS" : "")
+                .append(showOptions && !includeNulls ? " EXCULDE NULLS" : "")
+                .append(" (")
+                .append(unpivot.getUnPivotClause())
+                .append(" FOR ").append(PlainSelect.getStringList(unpivotForClause, true, unpivotForClause != null && unpivotForClause.size() > 1))
+                .append(" IN ").append(PlainSelect.getStringList(unpivot.getUnPivotInClause(), true, true))
+                .append(")");
     }
 
     @Override
@@ -354,10 +383,12 @@ public class SelectDeParser implements SelectVisitor, SelectItemVisitor, FromIte
                 buffer.append(" SEMI");
             }
 
-            if (!join.isStraight()) {
-                buffer.append(" JOIN ");
-            } else {
+            if (join.isStraight()) {
                 buffer.append(" STRAIGHT_JOIN ");
+            } else if (join.isApply()) {
+                buffer.append(" APPLY ");
+            } else {
+                buffer.append(" JOIN ");
             }
 
         }

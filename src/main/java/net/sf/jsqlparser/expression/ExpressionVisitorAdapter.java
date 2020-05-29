@@ -26,6 +26,7 @@ import net.sf.jsqlparser.statement.select.SelectExpressionItem;
 import net.sf.jsqlparser.statement.select.SelectItemVisitor;
 import net.sf.jsqlparser.statement.select.SelectVisitor;
 import net.sf.jsqlparser.statement.select.SubSelect;
+import net.sf.jsqlparser.statement.select.UnPivot;
 import net.sf.jsqlparser.statement.select.WithItem;
 
 public class ExpressionVisitorAdapter implements ExpressionVisitor, ItemsListVisitor, PivotVisitor, SelectItemVisitor {
@@ -169,7 +170,11 @@ public class ExpressionVisitorAdapter implements ExpressionVisitor, ItemsListVis
         } else if (expr.getLeftItemsList() != null) {
             expr.getLeftItemsList().accept(this);
         }
-        expr.getRightItemsList().accept(this);
+        if (expr.getRightExpression() != null) {
+            expr.getRightExpression().accept(this);
+        } else {
+            expr.getRightItemsList().accept(this);
+        }
     }
 
     @Override
@@ -476,6 +481,11 @@ public class ExpressionVisitorAdapter implements ExpressionVisitor, ItemsListVis
     }
 
     @Override
+    public void visit(UnPivot unpivot) {
+        unpivot.accept(this);
+    }
+
+    @Override
     public void visit(AllColumns allColumns) {
 
     }
@@ -528,5 +538,11 @@ public class ExpressionVisitorAdapter implements ExpressionVisitor, ItemsListVis
     @Override
     public void visit(SimilarToExpression expr) {
         visitBinaryExpression(expr);
+    }
+
+    @Override
+    public void visit(ArrayExpression array) {
+        array.getObjExpression().accept(this);
+        array.getIndexExpression().accept(this);
     }
 }

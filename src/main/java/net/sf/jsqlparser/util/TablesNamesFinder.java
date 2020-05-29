@@ -14,6 +14,7 @@ import java.util.List;
 import net.sf.jsqlparser.expression.AllComparisonExpression;
 import net.sf.jsqlparser.expression.AnalyticExpression;
 import net.sf.jsqlparser.expression.AnyComparisonExpression;
+import net.sf.jsqlparser.expression.ArrayExpression;
 import net.sf.jsqlparser.expression.BinaryExpression;
 import net.sf.jsqlparser.expression.CaseExpression;
 import net.sf.jsqlparser.expression.CastExpression;
@@ -58,6 +59,7 @@ import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.Block;
 import net.sf.jsqlparser.statement.Commit;
+import net.sf.jsqlparser.statement.DeclareStatement;
 import net.sf.jsqlparser.statement.DescribeStatement;
 import net.sf.jsqlparser.statement.ExplainStatement;
 import net.sf.jsqlparser.statement.SetStatement;
@@ -68,14 +70,18 @@ import net.sf.jsqlparser.statement.StatementVisitor;
 import net.sf.jsqlparser.statement.Statements;
 import net.sf.jsqlparser.statement.UseStatement;
 import net.sf.jsqlparser.statement.alter.Alter;
+import net.sf.jsqlparser.statement.alter.sequence.AlterSequence;
 import net.sf.jsqlparser.statement.comment.Comment;
 import net.sf.jsqlparser.statement.create.index.CreateIndex;
+import net.sf.jsqlparser.statement.create.schema.CreateSchema;
+import net.sf.jsqlparser.statement.create.sequence.CreateSequence;
 import net.sf.jsqlparser.statement.create.table.CreateTable;
 import net.sf.jsqlparser.statement.create.view.AlterView;
 import net.sf.jsqlparser.statement.create.view.CreateView;
 import net.sf.jsqlparser.statement.delete.Delete;
 import net.sf.jsqlparser.statement.drop.Drop;
 import net.sf.jsqlparser.statement.execute.Execute;
+import net.sf.jsqlparser.statement.grant.Grant;
 import net.sf.jsqlparser.statement.insert.Insert;
 import net.sf.jsqlparser.statement.merge.Merge;
 import net.sf.jsqlparser.statement.replace.Replace;
@@ -628,8 +634,11 @@ public class TablesNamesFinder implements SelectVisitor, FromItemVisitor, Expres
 
     @Override
     public void visit(Update update) {
-        for (Table table : update.getTables()) {
-            visit(table);
+        visit(update.getTable());
+        if (update.getStartJoins() != null) {
+            for (Join join : update.getStartJoins()) {
+                join.getRightItem().accept(this);
+            }
         }
         if (update.getExpressions() != null) {
             for (Expression expression : update.getExpressions()) {
@@ -688,6 +697,11 @@ public class TablesNamesFinder implements SelectVisitor, FromItemVisitor, Expres
 
     @Override
     public void visit(CreateIndex createIndex) {
+        throw new UnsupportedOperationException(NOT_SUPPORTED_YET);
+    }
+
+    @Override
+    public void visit(CreateSchema aThis) {
         throw new UnsupportedOperationException(NOT_SUPPORTED_YET);
     }
 
@@ -851,5 +865,30 @@ public class TablesNamesFinder implements SelectVisitor, FromItemVisitor, Expres
     @Override
     public void visit(SimilarToExpression expr) {
         visitBinaryExpression(expr);
+    }
+
+    @Override
+    public void visit(DeclareStatement aThis) {
+    }
+
+    @Override
+    public void visit(Grant grant) {
+
+    }
+
+    @Override
+    public void visit(ArrayExpression array) {
+        array.getObjExpression().accept(this);
+        array.getIndexExpression().accept(this);
+    }
+
+    @Override
+    public void visit(CreateSequence createSequence) {
+        throw new UnsupportedOperationException("Finding tables from CreateSequence is not supported");
+    }
+
+    @Override
+    public void visit(AlterSequence alterSequence) {
+        throw new UnsupportedOperationException("Finding tables from AlterSequence is not supported");
     }
 }
